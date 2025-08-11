@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>習慣追跡アプリ</title>
+    <meta name="description" content="毎日の習慣を記録・追跡して、目標達成をサポートするアプリ">
+    
+    <!-- PWA対応 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="習慣追跡">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 16px 20px;
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-height: calc(100vh - 70px);
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .goal-setup {
+            margin-bottom: 20px;
+        }
+
+        .goal-setup h2 {
+            margin-bottom: 24px;
+            color: #333;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .goal-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .goal-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .goal-input::placeholder {
+            color: #999;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            min-height: 54px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-container {
+            padding: 20px 30px 30px;
+        }
+
+        .circle-progress {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 30px;
+        }
+
+        .circle-bg, .circle-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 10px solid;
+        }
+
+        .circle-bg {
+            border-color: #f0f0f0;
+        }
+
+        .circle-fill {
+            border-color: #667eea;
+            border-right-color: transparent;
+            border-bottom-color: transparent;
+            transform: rotate(-90deg);
+            transition: transform 0.6s ease;
+        }
+
+        .circle-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .goal-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+            max-width: 160px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .progress-text {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .progress-percentage {
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .check-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            margin: 10px 0 20px;
+            min-width: 200px;
+        }
+
+        .check-btn:hover {
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+
+        .check-btn:disabled {
+            background: #e8f5e8;
+            color: #4CAF50;
+            border: 2px solid #4CAF50;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px 0;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .reset-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .reset-btn:hover {
+            background: #ff5252;
+            transform: translateY(-1px);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .congratulations {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .congratulations-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 320px;
+        }
+
+        .congratulations h3 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .congratulations p {
+            color: #666;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+
+            .card {
+                padding: 20px;
+                margin: 10px 0;
+            }
+
+            .circle-progress {
+                width: 180px;
+                height: 180px;
+            }
+
+            .circle-bg, .circle-fill {
+                border-width: 8px;
+            }
+
+            .progress-text {
+                font-size: 24px;
+            }
+
+            .goal-text {
+                font-size: 13px;
+                max-width: 120px;
+            }
+
+            .stats {
+                gap: 12px;
+                margin: 16px 0;
+            }
+
+            .stat-number {
+                font-size: 18px;
+            }
+
+            .stat-label {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>習慣追跡アプリ</h1>
+    </header>
+
+    <main class="container">
+        <!-- 目標設定画面 -->
+        <section id="goalSetup" class="card goal-setup">
+            <h2>習慣を設定してください</h2>
+            <input 
+                type="text" 
+                id="goalInput" 
+                class="goal-input" 
+                placeholder="例：毎日読書する、運動する、水を飲む..."
+                maxlength="30"
+            >
+            <button id="setGoalBtn" class="btn">
+                目標を設定する
+            </button>
+        </section>
+
+        <!-- 進捗追跡画面 -->
+        <section id="progressContainer" class="card progress-container hidden">
+            <div class="circle-progress">
+                <div class="circle-bg"></div>
+                <div id="circleFill" class="circle-fill"></div>
+                <div class="circle-content">
+                    <div id="goalText" class="goal-text">目標</div>
+                    <div id="progressText" class="progress-text">0 / 30</div>
+                    <div id="progressPercentage" class="progress-percentage">0%</div>
+                </div>
+            </div>
+
+            <button id="checkBtn" class="btn check-btn">
+                今日の習慣を記録
+            </button>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div id="totalDays" class="stat-number">0</div>
+                    <div class="stat-label">総日数</div>
+                </div>
+                <div class="stat-item">
+                    <div id="streak" class="stat-number">0</div>
+                    <div class="stat-label">連続日数</div>
+                </div>
+                <div class="stat-item">
+                    <div id="successRate" class="stat-number">0%</div>
+                    <div class="stat-label">成功率</div>
+                </div>
+            </div>
+
+            <button id="resetBtn" class="reset-btn">
+                リセット
+            </button>
+        </section>
+    </main>
+
+    <!-- 祝福モーダル -->
+    <div id="congratulations" class="congratulations hidden">
+        <div class="congratulations-content">
+            <h3>🎉 目標達成！</h3>
+            <p>おめでとうございます！<br>30日間の習慣を達成しました！</p>
+            <button id="congratsClose" class="btn">続ける</button>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        // アプリケーションの状態管理
+        let appState = {
+            goal: '',
+            currentCount: 0,
+            targetCount: 30,
+            totalDays: 0,
+            successfulDays: 0,
+            streak: 0,
+            lastCheckDate: null,
+            startDate: null
+        };
+
+        // DOM要素の取得
+        const elements = {
+            goalSetup: document.getElementById('goalSetup'),
+            progressContainer: document.getElementById('progressContainer'),
+            goalInput: document.getElementById('goalInput'),
+            setGoalBtn: document.getElementById('setGoalBtn'),
+            goalText: document.getElementById('goalText'),
+            progressText: document.getElementById('progressText'),
+            progressPercentage: document.getElementById('progressPercentage'),
+            circleFill: document.getElementById('circleFill'),
+            checkBtn: document.getElementById('checkBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            totalDays: document.getElementById('totalDays'),
+            streak: document.getElementById('streak'),
+            successRate: document.getElementById('successRate'),
+            congratulations: document.getElementById('congratulations'),
+            congratsClose: document.getElementById('congratsClose')
+        };
+
+        // ローカルストレージのキー
+        const STORAGE_KEY = 'habitTrackerApp';
+
+        // データの保存
+        function saveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            } catch (error) {
+                console.error('データの保存に失敗しました:', error);
+            }
+        }
+
+        // データの読み込み
+        function loadData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && typeof parsed === 'object') {
+                        appState = { ...appState, ...parsed };
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error('データの読み込みに失敗しました:', error);
+            }
+            return false;
+        }
+
+        // 目標設定
+        function setGoal() {
+            const goal = elements.goalInput.value.trim();
+            if (!goal) {
+                elements.goalInput.focus();
+                return;
+            }
+
+            appState.goal = goal;
+            appState.startDate = new Date().toISOString();
+            elements.goalText.textContent = goal;
+            
+            elements.goalSetup.classList.add('hidden');
+            elements.progressContainer.classList.remove('hidden');
+            
+            updateDisplay();
+            saveData();
+        }
+
+        // 習慣チェック
+        function checkHabit() {
+            const today = new Date().toDateString();
+            
+            if (appState.lastCheckDate === today) {
+                alert('今日はすでに記録済みです！');
+                return;
+            }
+
+            appState.currentCount++;
+            appState.totalDays++;
+            appState.successfulDays++;
+            appState.lastCheckDate = today;
+            appState.streak++;
+
+            updateDisplay();
+            saveData();
+
+            if (appState.currentCount >= appState.targetCount) {
+                setTimeout(() => {
+                    showCongratulations();
+                }, 600);
+            }
+        }
+
+        // リセット機能
+        function resetApp() {
+            if (!confirm('本当にすべてのデータをリセットしますか？')) {
+                return;
+            }
+
+            appState = {
+                goal: '',
+                currentCount: 0,
+                targetCount: 30,
+                totalDays: 0,
+                successfulDays: 0,
+                streak: 0,
+                lastCheckDate: null,
+                startDate: null
+            };
+
+            elements.goalInput.value = '';
+            elements.goalSetup.classList.remove('hidden');
+            elements.progressContainer.classList.add('hidden');
+            
+            localStorage.removeItem(STORAGE_KEY);
+            elements.goalInput.focus();
+        }
+
+        // 表示更新
+        function updateDisplay() {
+            elements.progressText.textContent = `${appState.currentCount} / ${appState.targetCount}`;
+            
+            const percentage = Math.round((appState.currentCount / appState.targetCount) * 100);
+            elements.progressPercentage.textContent = `${percentage}%`;
+            
+            const progress = (appState.currentCount / appState.targetCount) * 360;
+            const clampedProgress = Math.min(progress, 360);
+            elements.circleFill.style.transform = `rotate(${clampedProgress - 90}deg)`;
+            
+            if (clampedProgress > 180) {
+                elements.circleFill.style.borderRightColor = '#667eea';
+                elements.circleFill.style.borderBottomColor = '#667eea';
+            } else {
+                elements.circleFill.style.borderRightColor = 'transparent';
+                elements.circleFill.style.borderBottomColor = 'transparent';
+            }
+
+            elements.totalDays.textContent = appState.totalDays;
+            elements.streak.textContent = appState.streak;
+            elements.successRate.textContent = appState.totalDays > 0 ? 
+                Math.round((appState.successfulDays / appState.totalDays) * 100) + '%' : '0%';
+
+            const today = new Date().toDateString();
+            if (appState.lastCheckDate === today) {
+                elements.checkBtn.disabled = true;
+                elements.checkBtn.textContent = '今日は記録済み ✓';
+            } else {
+                elements.checkBtn.disabled = false;
+                elements.checkBtn.textContent = '今日の習慣を記録';
+            }
+        }
+
+        // 祝福モーダル表示
+        function showCongratulations() {
+            elements.congratulations.classList.remove('hidden');
+        }
+
+        // 祝福モーダル閉じる
+        function closeCongratulations() {
+            elements.congratulations.classList.add('hidden');
+        }
+
+        // イベントリスナー設定
+        function setupEventListeners() {
+            elements.setGoalBtn.addEventListener('click', setGoal);
+            elements.goalInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    setGoal();
+                }
+            });
+
+            elements.checkBtn.addEventListener('click', checkHabit);
+            elements.resetBtn.addEventListener('click', resetApp);
+
+            elements.congratsClose.addEventListener('click', closeCongratulations);
+            elements.congratulations.addEventListener('click', (e) => {
+                if (e.target === elements.congratulations) {
+                    closeCongratulations();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !elements.congratulations.classList.contains('hidden')) {
+                    closeCongratulations();
+                }
+            });
+        }
+
+        // アプリケーション初期化
+        function initApp() {
+            setupEventListeners();
+            
+            const hasData = loadData();
+            
+            if (hasData && appState.goal) {
+                elements.goalText.textContent = appState.goal;
+                elements.goalSetup.classList.add('hidden');
+                elements.progressContainer.classList.remove('hidden');
+                updateDisplay();
+            } else {
+                elements.goalInput.focus();
+            }
+        }
+
+        // PWA Service Worker登録
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // アプリ初期化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        // ページの可視性変更時の処理
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && appState.goal) {
+                updateDisplay();
+            }
+        });
+    </script>
+</body>
+</html>
+
